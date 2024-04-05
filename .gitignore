@@ -1,0 +1,4 @@
+bot/settings/creds.py
+__pycache__
+
+bot/logs/*.log
