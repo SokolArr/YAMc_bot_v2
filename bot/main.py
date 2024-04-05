@@ -24,11 +24,26 @@ dp = Dispatcher()
 async def start_handler(message: aio_types.Message):
     await message.answer(f'start_init')
     
+async def start_web_handler(message: aio_types.Message):
+    markup = aio_types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                aio_types.InlineKeyboardButton(
+                    text="Website",
+                    web_app=aio_types.WebAppInfo(url="https://google.com/"),
+                )
+            ]
+        ]
+    )
+    await message.answer("Website", reply_markup=markup)
+    
 async def all_mes_handler(message: aio_types.Message):
     await debug_logger.debug(f'{message}')
     
 async def start():
     dp.message.register(start_handler, Command("start"))
+    dp.message.register(start_web_handler, Command("start_web"))
+    
     if debug_logger:dp.message.register(all_mes_handler, F.text)
 
     while True:
