@@ -39,15 +39,13 @@ if global_tg_settings.is_debug:
 bot = Bot(token=global_tg_settings.token)
 dp = Dispatcher()
 dp['bot_start_dt'] = dt.now(tz.utc)
+dp.message.register(start_handler, Command("start"))
+dp.message.register(web_handler_wrapper.web_handler, Command("web"))
     
 # Main alive func
 async def start():
     try:
         await set_commands(bot)
-        
-        dp.message.register(start_handler, Command("start"))
-        dp.message.register(web_handler_wrapper.web_handler, Command("web"))
-        
         await main_poller(global_tg_settings, bot, dp, logger, debug_logger_handler_wrapper)
         
     except Exception:
