@@ -1,67 +1,63 @@
-
+# Other main imports
 import asyncio
 import time
+from datetime import datetime as dt
+from datetime import timezone as tz
 
+# Aiogram
 from aiogram import Bot, Dispatcher
-from aiogram import types as aio_types
 from aiogram import F
 from aiogram.filters.command import Command
 
+# Settings
 from settings.global_settings import GlobalTgSettings
 from settings.logger_settings import AppLogger
-
 from settings.creds import creds
 
-global_tg_settings = GlobalTgSettings(**creds)
-logger = AppLogger(logger_name='main_logger')
-if global_tg_settings.is_debug: debug_logger = AppLogger(logger_name='debug_logger', 
-                                                        is_debug=global_tg_settings.is_debug, 
-                                                        filename='bot/logs/debug_logger.log')
+# Utils
+from utils.main_poller import main_poller
+from utils.commands import set_commands
 
+# Handlers
+from handlers.start import start_handler
+from handlers.web import WebHandlerWrapper
+from handlers.debug import DebugHandlerWrapper
+
+# Main init
+global_tg_settings = GlobalTgSettings(**creds)
+web_handler_wrapper = WebHandlerWrapper(global_tg_settings.web_site)
+logger = AppLogger(logger_name='main_logger')
+
+# Debug mode
+if global_tg_settings.is_debug:
+    debug_logger = AppLogger(logger_name='debug_logger',
+                             is_debug=global_tg_settings.is_debug, 
+                             filename='bot/logs/debug_logger.log')
+    debug_logger_handler_wrapper = DebugHandlerWrapper(debug_logger)
+
+# Bot init
 bot = Bot(token=global_tg_settings.token)
 dp = Dispatcher()
-
-async def start_handler(message: aio_types.Message):
-    await message.answer(f'start_init')
+dp['bot_start_dt'] = dt.now(tz.utc)
     
-async def start_web_handler(message: aio_types.Message):
-    markup = aio_types.InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                aio_types.InlineKeyboardButton(
-                    text="Website",
-                    web_app=aio_types.WebAppInfo(url="https://google.com/"),
-                )
-            ]
-        ]
-    )
-    await message.answer("Website", reply_markup=markup)
-    
-async def all_mes_handler(message: aio_types.Message):
-    await debug_logger.debug(f'{message}')
-    
+# Main alive func
 async def start():
-    dp.message.register(start_handler, Command("start"))
-    dp.message.register(start_web_handler, Command("start_web"))
+    try:
+        await set_commands(bot)
+        
+        dp.message.register(start_handler, Command("start"))
+        dp.message.register(web_handler_wrapper.web_handler, Command("web"))
+        
+        await main_poller(global_tg_settings, bot, dp, logger, debug_logger_handler_wrapper)
+        
+    except Exception:
+        raise Exception
     
-    if debug_logger:dp.message.register(all_mes_handler, F.text)
-
+if __name__ == '__main__':
     while True:
         try:
-            await logger.info(f'Bot start!')
-            await bot.send_message(global_tg_settings.tg_admin_id, f'Bot start!')
-            await dp.start_polling(bot)
+            asyncio.run(start())
             
         except Exception as e:
-            await logger.error(f'Bot down with error: "{e}"')
-            await bot.send_message(global_tg_settings.tg_admin_id, f'Bot down with error: "{e}"')
-            await bot.session.close()
+            logger.error(f'Bot down with error: "{e}"')
             time.sleep(5)
-            
-        finally:
-            await logger.info(f'Bot down!')
-            await bot.send_message(global_tg_settings.tg_admin_id, f'Bot down!')
-            await bot.session.close()
-        
-if __name__ == '__main__':
-    asyncio.run(start())
