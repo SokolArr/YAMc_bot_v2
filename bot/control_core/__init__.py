@@ -1,5 +1,5 @@
 try:
-    from .settings.global_tg_settings import GlobalTgSettings
+    from .settings.global_tg_settings import GlobalSettings
     from .utils.logger import AppLogger
     print('✅ control_core - loaded ')
     
